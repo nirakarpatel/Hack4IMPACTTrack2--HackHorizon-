@@ -2,6 +2,23 @@
 
 EROS is a unified real-time emergency coordination platform designed to reduce response times by connecting citizens, ambulances, and hospitals.
 
+# Hack4IMPACTTrack2-HackHorizon
+
+Team Information:
+
+Team Name: Hack Horizon
+
+Members Name:
+              1. Nirakar Patel
+              2. Jiru Pranita Krishna Reddy
+              3. Aditya Sekhar Das
+              4. Swadhin Dibya Jyoti
+
+Domain: Articial Intelligance in healthcare
+
+Approved Problem Statement : EROS – An AI powered unified emergency platform designed to reduce response delays and save lives.
+
+
 ## Architecture
 
 - **Backend Engine (`services/backend-engine`)**: Node.js + Express + Socket.io + Firestore. Handles real-time SOS broadcasting and persistence.
