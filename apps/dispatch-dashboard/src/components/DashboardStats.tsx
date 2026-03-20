@@ -70,7 +70,7 @@ export default function DashboardStats() {
         { label: 'Units Active', value: statsData.activeUnits.toString().padStart(2, '0'), icon: Ambulance, color: 'text-blue-400', bg: 'bg-blue-500/10' },
         { label: 'Avg Response', value: statsData.avgResponse, icon: Timer, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
         { label: 'Traffic Load', value: statsData.trafficLoad, icon: BarChart3, color: 'text-orange-400', bg: 'bg-orange-500/10' },
-        { label: 'System Load', value: 'OPTIMAL', icon: Zap, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+        { label: 'Available Beds', value: statsData.beds.toString(), icon: Home, color: 'text-purple-400', bg: 'bg-purple-500/10' },
     ];
 
     return (
