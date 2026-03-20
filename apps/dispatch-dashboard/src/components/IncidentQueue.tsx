@@ -27,6 +27,8 @@ interface Recommendation {
     reasoning: string;
 }
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:4000';
+
 export default function IncidentQueue() {
     const [emergencies, setEmergencies] = useState<Emergency[]>([]);
     const [recommendations, setRecommendations] = useState<Record<string, Recommendation[]>>({});
@@ -83,7 +85,6 @@ export default function IncidentQueue() {
     }, []);
 
     const fetchRecommendations = async (incidentId: string) => {
-        const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:4000';
         setLoadingRecs(prev => ({ ...prev, [incidentId]: true }));
         try {
             const response = await fetch(`${BACKEND_URL}/api/ai-recommendations`, {
@@ -103,7 +104,6 @@ export default function IncidentQueue() {
     };
 
     const handleAssign = async (incidentId: string, ambId?: string) => {
-        const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:4000';
         try {
             const response = await fetch(`${BACKEND_URL}/api/simulator/assign`, {
                 method: 'POST',

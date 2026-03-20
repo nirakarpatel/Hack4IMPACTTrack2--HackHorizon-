@@ -214,33 +214,41 @@ const App = () => {
             { name: 'Mumbai', lat: 19.0760, lng: 72.8777 },
             { name: 'Bangalore', lat: 12.9716, lng: 77.5946 }
         ];
-        const city = cities[Math.floor(Math.random() * cities.length)];
-        const location = {
-            lat: city.lat + (Math.random() - 0.5) * 0.05,
-            lng: city.lng + (Math.random() - 0.5) * 0.05,
-            city: city.name
-        };
-        setUserLocation(location);
+        const defaultCity = cities[Math.floor(Math.random() * cities.length)];
 
-        try {
-            const resp = await fetch(`${BACKEND_URL}/api/sos`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    citizenId: user.phone,
-                    userProfile: user,
-                    location,
-                    city: city.name,
-                    type: 'Critical Medical Alert'
-                })
-            });
-            const data = await resp.json();
-            if (data.success) {
-                setIncidentId(data.id);
-                setStep('sos_active');
+        const submitSOS = async (lat, lng, cityName) => {
+            const location = { lat, lng, city: cityName };
+            setUserLocation(location);
+            try {
+                const resp = await fetch(`${BACKEND_URL}/api/sos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        citizenId: user.phone,
+                        userProfile: user,
+                        location,
+                        city: cityName,
+                        type: 'Critical Medical Alert'
+                    })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    setIncidentId(data.id);
+                    setStep('sos_active');
+                }
+            } catch (err) {
+                console.error('SOS Trigger failed', err);
             }
-        } catch (err) {
-            console.error('SOS Trigger failed', err);
+        };
+
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => submitSOS(pos.coords.latitude, pos.coords.longitude, "Live Location"),
+                () => submitSOS(defaultCity.lat, defaultCity.lng, defaultCity.name),
+                { enableHighAccuracy: true }
+            );
+        } else {
+            submitSOS(defaultCity.lat, defaultCity.lng, defaultCity.name);
         }
     };
 
@@ -298,7 +306,13 @@ const App = () => {
         const isTransporting = incidentStatus === 'enroute_hospital' || incidentStatus === 'pickup';
 
         return (
-            <div className="min-h-screen bg-slate-950 flex flex-col text-white animate-in fade-in duration-1000">
+            <div className="min-h-screen bg-slate-950 flex flex-col text-white animate-in fade-in duration-1000 relative overflow-hidden">
+                {/* Visual Overlays */}
+                <div className="absolute inset-0 pointer-events-none z-[2000] overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-[150px] bg-gradient-to-b from-red-600/5 to-transparent"></div>
+                    <div className="scanline"></div>
+                </div>
+
                 <div className="relative flex-1">
                     <MapContainer
                         center={[userLocation?.lat || 20, userLocation?.lng || 78]}
@@ -343,7 +357,8 @@ const App = () => {
                         </div>
 
                         {assignedAmbulance && (
-                            <div className="glass p-8 rounded-[3.5rem] border-slate-800 shadow-[0_40px_80px_rgba(0,0,0,0.6)] animate-in slide-in-from-top duration-1000">
+                            <div className="glass p-8 rounded-[3.5rem] border-slate-800 shadow-[0_40px_80px_rgba(0,0,0,0.6)] animate-in slide-in-from-top duration-1000 relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent"></div>
                                 <div className="flex items-center justify-between mb-8">
                                     <div className="flex items-center gap-6">
                                         <div className="w-16 h-16 bg-red-600 rounded-[2rem] flex items-center justify-center shadow-[0_0_30px_rgba(220,38,38,0.4)]">
