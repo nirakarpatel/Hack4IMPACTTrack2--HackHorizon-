@@ -14,6 +14,8 @@ export default function App() {
     const [showSettings, setShowSettings] = React.useState(false);
     const [showProfile, setShowProfile] = React.useState(false);
     const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+    const [dispatcherName, setDispatcherName] = React.useState('');
+    const [dispatcherId, setDispatcherId] = React.useState('');
 
     React.useEffect(() => {
         const checkStatus = async () => {
@@ -73,17 +75,21 @@ export default function App() {
                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Emergency Response OS</p>
                     </div>
 
-                    <form onSubmit={(e) => { e.preventDefault(); setIsAuthenticated(true); }} className="space-y-5">
+                    <form onSubmit={(e) => { e.preventDefault(); setIsAuthenticated(true); }} className="space-y-4">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1 flex items-center gap-2"><User size={12}/> Dispatcher ID</label>
-                            <input type="text" placeholder="DSP-4029" className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3.5 outline-none transition-all font-medium text-sm text-white focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-600" required />
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1 flex items-center gap-2"><User size={12}/> Full Name</label>
+                            <input type="text" value={dispatcherName} onChange={(e) => setDispatcherName(e.target.value)} placeholder="Enter your name" className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3.5 outline-none transition-all font-medium text-sm text-white focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10" required />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1 flex items-center gap-2"><Settings size={12}/> Security Passcode</label>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1 flex items-center gap-2"><Settings size={12}/> Dispatcher ID</label>
+                            <input type="text" value={dispatcherId} onChange={(e) => setDispatcherId(e.target.value)} placeholder="DSP-4029" className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3.5 outline-none transition-all font-medium text-sm text-white focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10" required />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1 flex items-center gap-2"><Shield size={12}/> Security Passcode</label>
                             <input type="password" placeholder="••••••••" className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3.5 outline-none transition-all font-medium text-sm text-white focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-600" required />
                         </div>
                         
-                        <button type="submit" className="w-full mt-8 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm uppercase tracking-widest py-4 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] transition-all flex justify-center items-center gap-2">
+                        <button type="submit" className="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm uppercase tracking-widest py-4 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] transition-all flex justify-center items-center gap-2">
                             <Shield size={16}/> Authenticate
                         </button>
                     </form>
@@ -174,7 +180,7 @@ export default function App() {
                                     <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
                                         <User size={18} />
                                     </div>
-                                    <span className="text-sm font-medium">Dispatcher 04</span>
+                                    <span className="text-sm font-medium">{dispatcherId}</span>
                                 </button>
                                 
                                 {showProfile && (
@@ -193,8 +199,8 @@ export default function App() {
                                                         <User size={24} className="text-white"/>
                                                     </div>
                                                     <div>
-                                                        <h4 className="font-bold text-white">Aditya Sekhar Das</h4>
-                                                        <p className="text-xs text-blue-400 font-medium">Senior Dispatcher</p>
+                                                        <h4 className="font-bold text-white">{dispatcherName}</h4>
+                                                        <p className="text-xs text-blue-400 font-medium">{dispatcherId} • Senior Dispatcher</p>
                                                     </div>
                                                 </div>
                                             </div>

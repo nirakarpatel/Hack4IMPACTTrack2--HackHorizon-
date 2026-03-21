@@ -534,6 +534,19 @@ const App = () => {
                         <span className="text-xs font-black uppercase tracking-widest text-slate-300">Visits</span>
                     </button>
                 </div>
+
+                <div className="mt-8 pt-6 border-t border-slate-800/50 w-full animate-in fade-in duration-500">
+                    <button 
+                        onClick={() => {
+                            localStorage.removeItem('eros_citizen_profile');
+                            setUser({ name: '', phone: '', spo2: '', heartRate: '', bloodGroup: '', bloodPressure: '', city: '', state: '', medicines: [], appointments: [] });
+                            setStep('register');
+                        }} 
+                        className="w-full bg-slate-950 border border-red-500/30 text-red-500 font-black text-sm uppercase tracking-widest py-4 rounded-2xl shadow-xl active:scale-95 transition-transform hover:bg-red-500/10 flex items-center justify-center gap-2"
+                    >
+                        <Shield size={16}/> Clear Data & Logout
+                    </button>
+                </div>
             </div>
         );
     }
