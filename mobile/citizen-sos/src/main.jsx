@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Shield, MapPin, Phone, User, Activity, Bell, AlertTriangle, Navigation, ChevronRight, Heart, Zap, Thermometer, Droplets, Wind, Pill, Calendar, Clock, Plus, CalendarPlus, Stethoscope, ChevronLeft, RefreshCcw } from 'lucide-react';
+import { Shield, MapPin, Phone, User, Activity, Bell, AlertTriangle, Navigation, ChevronRight, Heart, Zap, Thermometer, Droplets, Wind, Pill, Calendar, Clock, Plus, CalendarPlus, Stethoscope, ChevronLeft, RefreshCcw, CheckCircle } from 'lucide-react';
 import io from 'socket.io-client';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
@@ -61,6 +61,20 @@ const hospitalIcon = L.divIcon({
     iconSize: [40, 40],
     iconAnchor: [20, 20]
 });
+
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; 
+};
 
 const MapAutoCenter = ({ userCoords, ambCoords }) => {
     const map = useMap();
@@ -234,6 +248,28 @@ const App = () => {
     const [emergencyDescription, setEmergencyDescription] = useState('');
     const [triageResult, setTriageResult] = useState(null);
     const [isTriaging, setIsTriaging] = useState(false);
+    const [hasArrived, setHasArrived] = useState(false);
+
+    useEffect(() => {
+        if (assignedAmbulance && userLocation) {
+            const dist = calculateDistance(
+                userLocation.lat, userLocation.lng,
+                assignedAmbulance.location.lat, assignedAmbulance.location.lng
+            );
+            
+            if (dist < 50 || incidentStatus === 'arrived') {
+                if (!hasArrived && step === 'sos_active') {
+                    setHasArrived(true);
+                    if ("vibrate" in navigator) navigator.vibrate([500, 200, 500, 200, 800]);
+                    
+                    try {
+                        const msg = new SpeechSynthesisUtterance("Ambulance has arrived at your location");
+                        window.speechSynthesis.speak(msg);
+                    } catch(e) {}
+                }
+            }
+        }
+    }, [assignedAmbulance, userLocation, incidentStatus, hasArrived, step]);
 
     useEffect(() => {
         socket.on('ambulance_assigned', (data) => {
@@ -840,12 +876,12 @@ const App = () => {
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${isTransporting ? 'text-blue-500' : 'text-green-500'}`}>
-                                            {incidentStatus === 'enroute_hospital' ? 'Hospital Transport' :
+                                        <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${hasArrived ? 'text-green-500' : isTransporting ? 'text-blue-500' : 'text-orange-500'}`}>
+                                            {hasArrived ? 'ARRIVED AT LOCATION' : incidentStatus === 'enroute_hospital' ? 'Hospital Transport' :
                                                 incidentStatus === 'pickup' ? 'Ambulance On-Site' : 'High-Speed response'}
                                         </p>
-                                        <p className="text-4xl font-black tabular-nums">
-                                            {incidentStatus === 'pickup' ? 'LOADING' : (incidentStatus === 'enroute_hospital' ? '03:15' : '02:40')}
+                                        <p className={`text-4xl font-black tabular-nums ${hasArrived ? 'text-white' : ''}`}>
+                                            {hasArrived ? 'NOW' : incidentStatus === 'pickup' ? 'LOADING' : (incidentStatus === 'enroute_hospital' ? '03:15' : '02:40')}
                                         </p>
                                     </div>
                                 </div>
@@ -855,14 +891,16 @@ const App = () => {
                                             <Activity size={18} className="text-red-500" />
                                         </div>
                                         <span className="text-sm font-bold leading-tight">
-                                            {incidentStatus === 'enroute_hospital'
+                                            {hasArrived 
+                                                ? 'Your emergency unit is now at your location. Medical help is with you.'
+                                                : incidentStatus === 'enroute_hospital'
                                                 ? 'Life-Support systems engaged for hospital transport'
                                                 : 'Siren active. Unit clearing traffic for immediate arrival'}
                                         </span>
                                     </div>
                                     <div className="h-6 bg-slate-950 rounded-2xl p-1 border border-slate-900 relative overflow-hidden">
                                         <div
-                                            className={`h-full bg-gradient-to-r from-red-600 to-red-400 rounded-xl transition-all duration-[4000ms] shadow-[0_0_15px_rgba(220,38,38,0.5)] ${incidentStatus === 'pickup' ? 'w-1/2' : (incidentStatus === 'enroute_hospital' ? 'w-full' : 'w-1/4')
+                                            className={`h-full bg-gradient-to-r ${hasArrived ? 'from-green-600 to-green-400 shadow-[0_0_15px_rgba(34,197,94,0.5)] w-full' : 'from-red-600 to-red-400 shadow-[0_0_15px_rgba(220,38,38,0.5)]'} rounded-xl transition-all duration-1000 ${!hasArrived ? (incidentStatus === 'pickup' ? 'w-1/2' : (incidentStatus === 'enroute_hospital' ? 'w-full' : 'w-1/4')) : ''
                                                 }`}
                                         ></div>
                                         <div className="absolute inset-0 flex items-center justify-center">
@@ -875,11 +913,42 @@ const App = () => {
                     </div>
 
                     <div className="absolute bottom-12 left-6 right-6 z-[1000] space-y-4">
-                        <button className="w-full bg-red-600 text-white font-black py-6 rounded-[2.5rem] flex items-center justify-center gap-3 shadow-[0_20px_40px_rgba(220,38,38,0.4)] transition-transform active:scale-95 group">
-                            <Phone size={24} className="group-hover:animate-shake" /> CALL COORDINATOR
-                        </button>
+                        {hasArrived ? (
+                            <button className="w-full bg-green-600 border border-green-500/50 text-white font-black py-6 rounded-[2.5rem] flex items-center justify-center gap-3 shadow-[0_0_40px_rgba(34,197,94,0.4)] pointer-events-none transition-all">
+                                <CheckCircle size={24} /> RESPONDERS ARRIVED
+                            </button>
+                        ) : (
+                            <button className="w-full bg-red-600 text-white font-black py-6 rounded-[2.5rem] flex items-center justify-center gap-3 shadow-[0_20px_40px_rgba(220,38,38,0.4)] transition-transform active:scale-95 group">
+                                <Phone size={24} className="group-hover:animate-shake" /> CALL COORDINATOR
+                            </button>
+                        )}
                     </div>
                 </div>
+
+                {hasArrived && (
+                    <div className="absolute inset-0 z-[3000] bg-slate-950/80 backdrop-blur-md flex flex-col justify-end p-6 pb-12 animate-in fade-in duration-500">
+                        <div className="bg-green-600 border border-green-400/30 rounded-[2.5rem] p-8 shadow-[0_0_80px_rgba(34,197,94,0.5)] transform hover:scale-[1.02] transition-transform animate-in slide-in-from-bottom-10 space-y-5">
+                            <div className="flex items-start gap-4 mb-2">
+                                <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.2)] flex-shrink-0 animate-[bounce_2s_ease-in-out_infinite]">
+                                    <CheckCircle size={32} className="text-green-600" />
+                                </div>
+                                <div>
+                                    <h2 className="text-white text-2xl font-black leading-tight tracking-tight uppercase">Ambulance<br/>Reached You</h2>
+                                </div>
+                            </div>
+                            <div className="h-px w-full bg-white/20"></div>
+                            <p className="text-green-50 font-bold text-sm leading-relaxed">
+                                The assigned unit <span className="bg-white/20 px-2 py-0.5 rounded text-white font-black">{assignedAmbulance?.id || 'AMB-149'}</span> has arrived at your exact location. Please ensure the pathway is clear and follow instructions from first responders.
+                            </p>
+                            <button 
+                                onClick={() => setHasArrived(false)}
+                                className="w-full mt-6 bg-white border border-green-700 hover:bg-green-50 text-green-700 py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-colors shadow-lg"
+                            >
+                                DISMISS ALERT
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 <div className="bg-slate-950/80 backdrop-blur-3xl border-t border-slate-900 p-10 pb-16">
                     <button
