@@ -3,7 +3,8 @@ import DashboardStats from './components/DashboardStats';
 import LiveMap from './components/LiveMap';
 import IncidentQueue from './components/IncidentQueue';
 import AICopilot from './components/AICopilot';
-import { Shield, Bell, Settings, User, Bot } from 'lucide-react';
+import StatisticalInsights from './components/StatisticalInsights';
+import { Shield, Bell, Settings, User, Bot, BarChart3 } from 'lucide-react';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:4000';
 
@@ -13,9 +14,18 @@ export default function App() {
     const [showCopilot, setShowCopilot] = React.useState(false);
     const [showSettings, setShowSettings] = React.useState(false);
     const [showProfile, setShowProfile] = React.useState(false);
-    const [isAuthenticated, setIsAuthenticated] = React.useState(false);
-    const [dispatcherName, setDispatcherName] = React.useState('');
-    const [dispatcherId, setDispatcherId] = React.useState('');
+    const [showAnalytics, setShowAnalytics] = React.useState(false);
+    
+    // Auth persistence
+    const [isAuthenticated, setIsAuthenticated] = React.useState(() => {
+        return localStorage.getItem('dispatcher_authenticated') === 'true';
+    });
+    const [dispatcherName, setDispatcherName] = React.useState(() => {
+        return localStorage.getItem('dispatcher_name') || '';
+    });
+    const [dispatcherId, setDispatcherId] = React.useState(() => {
+        return localStorage.getItem('dispatcher_id') || '';
+    });
 
     React.useEffect(() => {
         const checkStatus = async () => {
@@ -75,7 +85,13 @@ export default function App() {
                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Emergency Response OS</p>
                     </div>
 
-                    <form onSubmit={(e) => { e.preventDefault(); setIsAuthenticated(true); }} className="space-y-4">
+                    <form onSubmit={(e) => { 
+                        e.preventDefault(); 
+                        setIsAuthenticated(true);
+                        localStorage.setItem('dispatcher_authenticated', 'true');
+                        localStorage.setItem('dispatcher_name', dispatcherName);
+                        localStorage.setItem('dispatcher_id', dispatcherId);
+                    }} className="space-y-4">
                         <div className="space-y-2">
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1 flex items-center gap-2"><User size={12}/> Full Name</label>
                             <input type="text" value={dispatcherName} onChange={(e) => setDispatcherName(e.target.value)} placeholder="Enter your name" className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3.5 outline-none transition-all font-medium text-sm text-white focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10" required />
@@ -153,6 +169,18 @@ export default function App() {
                             <Bot size={14} />
                             <span>AI Copilot</span>
                         </button>
+                        
+                        {/* Live Analytics Toggle */}
+                        <button
+                            onClick={() => setShowAnalytics(!showAnalytics)}
+                            className={`flex items-center gap-2 px-4 py-1.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wider ${showAnalytics
+                                ? 'bg-blue-600/20 border-blue-500/50 text-blue-400 shadow-[0_0_15px_rgba(37,99,235,0.1)]'
+                                : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                                }`}
+                        >
+                            <BarChart3 size={14} />
+                            <span>Pulse Analytics</span>
+                        </button>
                         <div className="flex flex-col items-end mr-4">
                             <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
                                 <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
@@ -226,6 +254,9 @@ export default function App() {
                                                     onClick={() => {
                                                         setIsAuthenticated(false);
                                                         setShowProfile(false);
+                                                        localStorage.removeItem('dispatcher_authenticated');
+                                                        localStorage.removeItem('dispatcher_name');
+                                                        localStorage.removeItem('dispatcher_id');
                                                     }}
                                                     className="w-full text-left px-3 py-2 rounded-xl text-sm font-bold text-red-500 hover:text-white hover:bg-red-500/20 transition-colors mt-1"
                                                 >
@@ -384,6 +415,9 @@ export default function App() {
                         </div>
                     </>
                 )}
+
+                {/* Statistical Insights Overlay */}
+                <StatisticalInsights isOpen={showAnalytics} onClose={() => setShowAnalytics(false)} />
 
                 {/* AI Copilot Panel */}
                 <AICopilot isOpen={showCopilot} onClose={() => setShowCopilot(false)} />
