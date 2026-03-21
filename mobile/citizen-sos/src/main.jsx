@@ -395,29 +395,33 @@ const App = () => {
 
         if ("geolocation" in navigator) {
             let handled = false;
+            // Increased timeout to 10s for real GPS lock
             const timeout = setTimeout(() => {
                 if (!handled) {
                     handled = true;
+                    console.log("Geolocation timed out, using fallback");
                     submitSOS(defaultCity.lat, defaultCity.lng, defaultCity.name);
                 }
-            }, 2000);
+            }, 10000);
 
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     if (!handled) {
                         handled = true;
                         clearTimeout(timeout);
-                        submitSOS(pos.coords.latitude, pos.coords.longitude, "Live Location");
+                        console.log("Exact Geolocation Acquired:", pos.coords);
+                        submitSOS(pos.coords.latitude, pos.coords.longitude, "Exact Device Location");
                     }
                 },
-                () => {
+                (error) => {
                     if (!handled) {
                         handled = true;
                         clearTimeout(timeout);
+                        console.warn("Geolocation Error, using fallback:", error.message);
                         submitSOS(defaultCity.lat, defaultCity.lng, defaultCity.name);
                     }
                 },
-                { enableHighAccuracy: true, timeout: 2000 }
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         } else {
             submitSOS(defaultCity.lat, defaultCity.lng, defaultCity.name);
