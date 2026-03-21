@@ -292,38 +292,12 @@ const App = () => {
 
     const triggerSOS = async () => {
         setIsTriaging(true);
-        
-        // --- Geolocation with High Accuracy ---
-        const getExactLocation = () => {
-            return new Promise((resolve) => {
-                if (!("geolocation" in navigator)) return resolve(null);
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => resolve({
-                        lat: pos.coords.latitude,
-                        lng: pos.coords.longitude,
-                        accuracy: pos.coords.accuracy,
-                        address: 'Live GPS Location'
-                    }),
-                    (err) => {
-                        console.error('Geolocation error:', err);
-                        resolve(null);
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                );
-            });
-        };
-
-        const liveLocation = await getExactLocation();
-        
         const cities = [
             { name: 'Bhubaneswar', lat: 20.2961, lng: 85.8245 },
             { name: 'Cuttack', lat: 20.4625, lng: 85.8830 },
             { name: 'Puri', lat: 19.8177, lng: 85.8286 }
         ];
-        const fallbackCity = cities[Math.floor(Math.random() * cities.length)];
-
-        const location = liveLocation || { ...fallbackCity, address: `Simulated: ${fallbackCity.name}` };
-        setUserLocation(location);
+        const defaultCity = cities[Math.floor(Math.random() * cities.length)];
 
         // Step 1: Run AI Triage if description provided
         let triageData = null;
@@ -352,34 +326,65 @@ const App = () => {
             }
         }
 
-        // Step 2: Submit SOS with Exact Location
-        try {
-            const resp = await fetch(`${BACKEND_URL}/api/sos`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    citizenId: user.phone,
-                    userProfile: user,
-                    location,
-                    city: location.city || (liveLocation ? 'Current Location' : fallbackCity.name),
-                    type: triageData?.type || 'Critical Medical Alert',
-                    priority: triageData?.priority || 3,
-                    description: emergencyDescription || undefined
-                })
-            });
-            const data = await resp.json();
-            if (data.success) {
-                setIncidentId(data.id);
-                setStep('sos_active');
-            } else {
-                setIncidentId('DEV-' + Date.now());
-                setStep('sos_active');
+        // Step 2: Submit SOS with triage-informed type and priority
+        const submitSOS = async (lat, lng, cityName) => {
+            const location = { lat, lng, city: cityName };
+            setUserLocation(location);
+            try {
+                const resp = await fetch(`${BACKEND_URL}/api/sos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        citizenId: user.phone,
+                        userProfile: user,
+                        location,
+                        city: cityName,
+                        type: triageData?.type || 'Critical Medical Alert',
+                        priority: triageData?.priority || 3,
+                        description: emergencyDescription || undefined
+                    })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    setIncidentId(data.id);
+                    setStep('sos_active');
+                } else {
+                    setIncidentId('DEV-' + Date.now());
+                    setStep('sos_active');
+                }
+            } catch (err) {
+                console.error('SOS Trigger failed', err);
             }
-        } catch (err) {
-            console.error('SOS Trigger failed', err);
-            // Even if API fails, move to SOS Active state for local feedback
-            setIncidentId('DEV-' + Date.now());
-            setStep('sos_active');
+        };
+
+        if ("geolocation" in navigator) {
+            let handled = false;
+            const timeout = setTimeout(() => {
+                if (!handled) {
+                    handled = true;
+                    submitSOS(defaultCity.lat, defaultCity.lng, defaultCity.name);
+                }
+            }, 2000);
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    if (!handled) {
+                        handled = true;
+                        clearTimeout(timeout);
+                        submitSOS(pos.coords.latitude, pos.coords.longitude, "Live Location");
+                    }
+                },
+                () => {
+                    if (!handled) {
+                        handled = true;
+                        clearTimeout(timeout);
+                        submitSOS(defaultCity.lat, defaultCity.lng, defaultCity.name);
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 2000 }
+            );
+        } else {
+            submitSOS(defaultCity.lat, defaultCity.lng, defaultCity.name);
         }
     };
 
