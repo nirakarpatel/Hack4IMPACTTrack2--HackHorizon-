@@ -293,9 +293,9 @@ const App = () => {
     const triggerSOS = async () => {
         setIsTriaging(true);
         const cities = [
-            { name: 'Delhi', lat: 28.6139, lng: 77.2090 },
-            { name: 'Mumbai', lat: 19.0760, lng: 72.8777 },
-            { name: 'Bangalore', lat: 12.9716, lng: 77.5946 }
+            { name: 'Bhubaneswar', lat: 20.2961, lng: 85.8245 },
+            { name: 'Cuttack', lat: 20.4625, lng: 85.8830 },
+            { name: 'Puri', lat: 19.8177, lng: 85.8286 }
         ];
         const defaultCity = cities[Math.floor(Math.random() * cities.length)];
 
@@ -510,8 +510,177 @@ const App = () => {
                     </div>
                 </div>
 
-                <div className="pt-12">
-                    <SlideToSOS onConfirm={triggerSOS} />
+                <VitalsGraph sys={parseInt((user.bloodPressure || '120').split('/')[0])} hr={parseInt(user.heartRate) || 72} />
+
+                <div className="grid grid-cols-2 gap-4 mt-8">
+                    <button onClick={() => setStep('medicine')} className="bg-slate-900 border border-slate-800 p-6 rounded-[3rem] flex flex-col items-center justify-center gap-4 shadow-xl active:scale-95 transition-transform group hover:border-blue-500/50 hover:shadow-[0_0_30px_rgba(59,130,246,0.15)] relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div className="w-14 h-14 bg-slate-950 rounded-[2rem] flex items-center justify-center group-hover:bg-blue-500/10 transition-colors border border-slate-800 group-hover:border-blue-500/30">
+                            <Pill size={24} className="text-blue-500" />
+                        </div>
+                        <span className="text-xs font-black uppercase tracking-widest text-slate-300">Medicine</span>
+                    </button>
+                    <button onClick={() => setStep('appointments')} className="bg-slate-900 border border-slate-800 p-6 rounded-[3rem] flex flex-col items-center justify-center gap-4 shadow-xl active:scale-95 transition-transform group hover:border-purple-500/50 hover:shadow-[0_0_30px_rgba(168,85,247,0.15)] relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div className="w-14 h-14 bg-slate-950 rounded-[2rem] flex items-center justify-center group-hover:bg-purple-500/10 transition-colors border border-slate-800 group-hover:border-purple-500/30">
+                            <Calendar size={24} className="text-purple-500" />
+                        </div>
+                        <span className="text-xs font-black uppercase tracking-widest text-slate-300">Visits</span>
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (step === 'medicine') {
+        const handleAddMed = (e) => {
+            e.preventDefault();
+            const md = {
+                id: Date.now(),
+                name: e.target.mname.value,
+                dosage: e.target.mdosage.value,
+                freq: e.target.mfreq.value,
+                time: e.target.mtime.value
+            };
+            saveUser({ ...user, medicines: [...(user.medicines || []), md] });
+            e.target.reset();
+        };
+
+        return (
+            <div className="min-h-screen bg-slate-950 text-white p-8 space-y-10 flex flex-col pt-12">
+                <header className="flex items-center gap-6">
+                    <button onClick={() => setStep('profile')} className="w-12 h-12 bg-slate-900 border border-slate-800 rounded-full flex items-center justify-center active:scale-90 transition-transform text-slate-400">
+                        <ChevronLeft size={24} />
+                    </button>
+                    <div>
+                        <h1 className="text-2xl font-black">Medicine</h1>
+                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-1">Prescription Tracker</p>
+                    </div>
+                </header>
+
+                <div className="glass p-8 rounded-[3rem] border-blue-500/20 shadow-[0_20px_40px_rgba(59,130,246,0.05)]">
+                    <h3 className="text-xs font-black text-blue-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Plus size={14} /> Add Medication</h3>
+                    <form onSubmit={handleAddMed} className="space-y-4">
+                        <input required name="mname" className="w-full bg-slate-900 border-2 border-slate-800 rounded-2xl px-6 py-4 text-sm" placeholder="Medicine Name" />
+                        <div className="grid grid-cols-2 gap-4">
+                            <input required name="mdosage" className="w-full bg-slate-900 border-2 border-slate-800 rounded-2xl px-6 py-4 text-sm" placeholder="Dosage (e.g. 50mg)" />
+                            <select required name="mfreq" className="w-full bg-slate-900 border-2 border-slate-800 rounded-2xl px-6 py-4 text-sm text-slate-400">
+                                <option value="" disabled selected>Frequency</option>
+                                <option value="Once Daily">Once Daily</option>
+                                <option value="Twice Daily">Twice Daily</option>
+                                <option value="As Needed">As Needed</option>
+                            </select>
+                        </div>
+                        <input required type="time" name="mtime" className="w-full bg-slate-900 border-2 border-slate-800 rounded-2xl px-6 py-4 text-sm text-slate-300 [&::-webkit-calendar-picker-indicator]:invert" />
+                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl transition-colors shadow-lg shadow-blue-600/20">REGISTER MEDICINE</button>
+                    </form>
+                </div>
+
+                <div className="flex-1 space-y-4">
+                    <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest pl-2">Today's Protocol</h3>
+                    {(!user.medicines || user.medicines.length === 0) ? (
+                        <div className="text-center py-10 bg-slate-900/50 rounded-[3rem] border border-slate-800 border-dashed">
+                            <Pill size={24} className="mx-auto text-slate-600 mb-2" />
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">No active medications</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {user.medicines.map(m => (
+                                <div key={m.id} className="bg-slate-900 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-xl">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-800 text-blue-500 shadow-inner">
+                                            <span className="text-[10px] font-black">{m.time}</span>
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-slate-200">{m.name}</p>
+                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{m.dosage} • {m.freq}</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => saveUser({...user, medicines: user.medicines.filter(x => x.id !== m.id)})} className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 active:scale-90 transition-transform">
+                                        &times;
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    if (step === 'appointments') {
+        const handleAddAppt = (e) => {
+            e.preventDefault();
+            const md = {
+                id: Date.now(),
+                docName: e.target.dname.value,
+                date: e.target.ddate.value,
+                time: e.target.dtime.value,
+                reason: e.target.dreason.value
+            };
+            saveUser({ ...user, appointments: [...(user.appointments || []), md] });
+            e.target.reset();
+        };
+
+        return (
+            <div className="min-h-screen bg-slate-950 text-white p-8 space-y-10 flex flex-col pt-12">
+                <header className="flex items-center gap-6">
+                    <button onClick={() => setStep('profile')} className="w-12 h-12 bg-slate-900 border border-slate-800 rounded-full flex items-center justify-center active:scale-90 transition-transform text-slate-400">
+                        <ChevronLeft size={24} />
+                    </button>
+                    <div>
+                        <h1 className="text-2xl font-black">Visits</h1>
+                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-1">Medical Care Schedule</p>
+                    </div>
+                </header>
+
+                <div className="glass p-8 rounded-[3rem] border-purple-500/20 shadow-[0_20px_40px_rgba(168,85,247,0.05)]">
+                    <h3 className="text-xs font-black text-purple-400 uppercase tracking-widest mb-6 flex items-center gap-2"><CalendarPlus size={14} /> Schedule Visit</h3>
+                    <form onSubmit={handleAddAppt} className="space-y-4">
+                        <input required name="dname" className="w-full bg-slate-900 border-2 border-slate-800 rounded-2xl px-6 py-4 text-sm" placeholder="Doctor's Name (e.g. Dr. Roberts)" />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"><Calendar size={18} /></span>
+                                <input required type="date" name="ddate" className="w-full bg-slate-900 border-2 border-slate-800 rounded-2xl px-6 py-4 pl-12 text-sm text-slate-300 [&::-webkit-calendar-picker-indicator]:invert" />
+                            </div>
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"><Clock size={18} /></span>
+                                <input required type="time" name="dtime" className="w-full bg-slate-900 border-2 border-slate-800 rounded-2xl px-6 py-4 pl-12 text-sm text-slate-300 [&::-webkit-calendar-picker-indicator]:invert" />
+                            </div>
+                        </div>
+                        <input required name="dreason" className="w-full bg-slate-900 border-2 border-slate-800 rounded-2xl px-6 py-4 text-sm" placeholder="Reason for Visit (e.g. Checkup)" />
+                        <button type="submit" className="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-4 rounded-2xl transition-colors shadow-lg shadow-purple-600/20">CONFIRM BOOKING</button>
+                    </form>
+                </div>
+
+                <div className="flex-1 space-y-4">
+                    <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest pl-2">Upcoming Consultations</h3>
+                    {(!user.appointments || user.appointments.length === 0) ? (
+                        <div className="text-center py-10 bg-slate-900/50 rounded-[3rem] border border-slate-800 border-dashed">
+                            <Stethoscope size={24} className="mx-auto text-slate-600 mb-2" />
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">No scheduled visits</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {user.appointments.map(a => (
+                                <div key={a.id} className="bg-slate-900 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-xl">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-slate-950 rounded-2xl flex flex-col items-center justify-center border border-slate-800 text-purple-500 shadow-inner">
+                                            <span className="text-[12px] font-black">{new Date(a.date).getDate() || '--'}</span>
+                                            <span className="text-[8px] font-black uppercase text-slate-500">{a.date ? new Date(a.date).toLocaleString('default', { month: 'short' }) : 'MON'}</span>
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-slate-200">{a.docName}</p>
+                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{a.time} • {a.reason}</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => saveUser({...user, appointments: user.appointments.filter(x => x.id !== a.id)})} className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 active:scale-90 transition-transform">
+                                        &times;
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         );
