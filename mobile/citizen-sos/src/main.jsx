@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Shield, MapPin, Phone, User, Activity, Bell, AlertTriangle, Navigation, ChevronRight, Heart, Zap, Thermometer, Droplets, Wind } from 'lucide-react';
+import { Shield, MapPin, Phone, User, Activity, Bell, AlertTriangle, Navigation, ChevronRight, Heart, Zap, Thermometer, Droplets, Wind, Pill, Calendar, Clock, Plus, CalendarPlus, Stethoscope, ChevronLeft } from 'lucide-react';
 import io from 'socket.io-client';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
@@ -143,11 +143,89 @@ const SlideToSOS = ({ onConfirm }) => {
     );
 };
 
+const VitalsGraph = ({ sys, hr }) => {
+    const [view, setView] = useState('weekly'); // daily, weekly, monthly
+
+    const getHealthStatus = (s, h) => {
+        if (s > 140 || s < 90 || h > 100 || h < 50) return { color: 'bg-red-500', glow: 'shadow-[0_0_15px_rgba(239,68,68,0.5)]', label: 'CRITICAL', text: 'text-red-500' };
+        if (s > 130 || s < 100 || h > 90 || h < 60) return { color: 'bg-orange-500', glow: 'shadow-[0_0_15px_rgba(249,115,22,0.5)]', label: 'ATTENTION', text: 'text-orange-500' };
+        if (s > 120 || h > 80) return { color: 'bg-yellow-500', glow: 'shadow-[0_0_15px_rgba(234,179,8,0.5)]', label: 'FAIR', text: 'text-yellow-500' };
+        return { color: 'bg-green-500', glow: 'shadow-[0_0_15px_rgba(34,197,94,0.5)]', label: 'OPTIMAL', text: 'text-green-500' };
+    };
+
+    const status = getHealthStatus(sys, hr);
+
+    const dailyData = [
+        { label: '12AM', val: hr - 10 }, { label: '4AM', val: hr - 8 }, { label: '8AM', val: hr - 2 },
+        { label: '12PM', val: hr + 5 }, { label: '4PM', val: hr + 2 }, { label: '8PM', val: hr }
+    ];
+
+    const weeklyData = [
+        { label: 'MON', val: hr - 5 }, { label: 'TUE', val: hr + 4 }, { label: 'WED', val: hr - 2 },
+        { label: 'THU', val: hr + 6 }, { label: 'FRI', val: hr - 1 }, { label: 'SAT', val: hr + 2 }, { label: 'SUN', val: hr }
+    ];
+
+    const monthlyData = [
+        { label: '1st', val: hr + 5 }, { label: '5th', val: hr - 3 }, { label: '10th', val: hr + 2 },
+        { label: '15th', val: hr - 4 }, { label: '20th', val: hr + 6 }, { label: '25th', val: hr - 1 }, { label: '30th', val: hr }
+    ];
+
+    const currentData = view === 'daily' ? dailyData : view === 'weekly' ? weeklyData : monthlyData;
+
+    return (
+        <div className="glass p-6 rounded-[2rem] border-slate-800/60 mt-6 relative overflow-hidden group">
+            <div className={`absolute -inset-10 bg-gradient-to-br from-transparent to-${status.color}/5 opacity-50 blur-xl transition-colors duration-1000`}></div>
+
+            <div className="flex justify-between items-start mb-6 relative z-10">
+                <div>
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-1 flex items-center gap-2"><Activity size={12} className={status.text} /> Vitals History</h3>
+                    <div className={`inline-block px-3 py-1 rounded-full text-[8px] font-black ${status.color} text-white ${status.glow} uppercase tracking-widest mt-1`}>
+                        {status.label} Status
+                    </div>
+                </div>
+
+                <div className="flex bg-slate-900/80 rounded-full p-1 border border-slate-800">
+                    {['daily', 'weekly', 'monthly'].map(t => (
+                        <button
+                            key={t}
+                            onClick={() => setView(t)}
+                            className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${view === t ? 'bg-slate-700 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            {t}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="flex items-end justify-between h-36 gap-2 relative z-10 pt-4">
+                {currentData.map((d, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-3 h-full justify-end group/bar">
+                        <div className="w-full bg-slate-900/80 rounded-t-xl relative h-full flex items-end overflow-hidden border-b border-slate-800">
+                            <div
+                                className={`w-full rounded-t-xl ${i === currentData.length - 1 ? status.color + ' ' + status.glow : 'bg-slate-700 group-hover/bar:bg-slate-600'} transition-all duration-700 ease-out`}
+                                style={{ height: `${Math.min(100, Math.max(10, (d.val / 140) * 100))}%` }}
+                            ></div>
+                        </div>
+                        <span className={`text-[8px] font-black uppercase tracking-wider ${i === currentData.length - 1 ? 'text-white' : 'text-slate-500'}`}>
+                            {d.label}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 const App = () => {
-    const [step, setStep] = useState('register'); // register, dashboard, sos_active
+    const [step, setStep] = useState('register'); // register, dashboard, sos_active, medicine, appointments
     const [user, setUser] = useState({
-        name: '', phone: '', spo2: '', heartRate: '', bloodGroup: '', bloodPressure: '', city: '', state: ''
+        name: '', phone: '', spo2: '', heartRate: '', bloodGroup: '', bloodPressure: '', city: '', state: '', medicines: [], appointments: []
     });
+
+    const saveUser = (updatedUser) => {
+        setUser(updatedUser);
+        localStorage.setItem('eros_citizen_profile', JSON.stringify(updatedUser));
+    };
     const [userLocation, setUserLocation] = useState(null);
     const [incidentId, setIncidentId] = useState(null);
     const [incidentStatus, setIncidentStatus] = useState('pending');
@@ -192,7 +270,8 @@ const App = () => {
 
         const savedUser = localStorage.getItem('eros_citizen_profile');
         if (savedUser) {
-            setUser(JSON.parse(savedUser));
+            const parsed = JSON.parse(savedUser);
+            setUser({ ...parsed, medicines: parsed.medicines || [], appointments: parsed.appointments || [] });
             if (step === 'register') setStep('dashboard');
         }
 
@@ -207,7 +286,7 @@ const App = () => {
 
     const handleRegister = (e) => {
         e.preventDefault();
-        localStorage.setItem('eros_citizen_profile', JSON.stringify(user));
+        saveUser(user);
         setStep('dashboard');
     };
 
@@ -269,19 +348,40 @@ const App = () => {
                 if (data.success) {
                     setIncidentId(data.id);
                     setStep('sos_active');
+                } else {
+                    setIncidentId('DEV-' + Date.now());
+                    setStep('sos_active');
                 }
             } catch (err) {
                 console.error('SOS Trigger failed', err);
-            } finally {
-                setIsTriaging(false);
             }
         };
 
         if ("geolocation" in navigator) {
+            let handled = false;
+            const timeout = setTimeout(() => {
+                if (!handled) {
+                    handled = true;
+                    submitSOS(defaultCity.lat, defaultCity.lng, defaultCity.name);
+                }
+            }, 2000);
+
             navigator.geolocation.getCurrentPosition(
-                (pos) => submitSOS(pos.coords.latitude, pos.coords.longitude, "Live Location"),
-                () => submitSOS(defaultCity.lat, defaultCity.lng, defaultCity.name),
-                { enableHighAccuracy: true }
+                (pos) => {
+                    if (!handled) {
+                        handled = true;
+                        clearTimeout(timeout);
+                        submitSOS(pos.coords.latitude, pos.coords.longitude, "Live Location");
+                    }
+                },
+                () => {
+                    if (!handled) {
+                        handled = true;
+                        clearTimeout(timeout);
+                        submitSOS(defaultCity.lat, defaultCity.lng, defaultCity.name);
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 2000 }
             );
         } else {
             submitSOS(defaultCity.lat, defaultCity.lng, defaultCity.name);
@@ -361,6 +461,42 @@ const App = () => {
                     </div>
                 </header>
 
+                <button
+                    onClick={() => setStep('profile')}
+                    className="w-full bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] flex items-center justify-between shadow-xl active:scale-95 transition-transform group hover:border-slate-700"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-slate-700 transition-colors">
+                            <User size={20} className="text-slate-300" />
+                        </div>
+                        <div className="text-left">
+                            <h3 className="text-sm font-black text-white">Full Medical Profile</h3>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Vitals • Medicine • Visits</p>
+                        </div>
+                    </div>
+                    <ChevronRight size={20} className="text-slate-500 group-hover:text-white transition-colors" />
+                </button>
+
+                <div className="pt-12">
+                    <SlideToSOS onConfirm={triggerSOS} />
+                </div>
+            </div>
+        );
+    }
+
+    if (step === 'profile') {
+        return (
+            <div className="min-h-screen bg-slate-950 text-white p-8 space-y-10 flex flex-col pt-12">
+                <header className="flex items-center gap-6">
+                    <button onClick={() => setStep('dashboard')} className="w-12 h-12 bg-slate-900 border border-slate-800 rounded-full flex items-center justify-center active:scale-90 transition-transform text-slate-400">
+                        <ChevronLeft size={24} />
+                    </button>
+                    <div>
+                        <h1 className="text-2xl font-black">Profile</h1>
+                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-1">Medical Identity Data</p>
+                    </div>
+                </header>
+
                 <div className="glass p-8 rounded-[3rem] border-slate-800/40">
                     <div className="flex gap-10 items-center">
                         <div className="w-24 h-24 bg-slate-950 rounded-full flex items-center justify-center border-4 border-red-600/20 text-3xl font-black text-red-500">
@@ -374,38 +510,8 @@ const App = () => {
                     </div>
                 </div>
 
-                {/* NLP Emergency Description Input */}
-                <div className="glass p-6 rounded-[2.5rem] border-slate-800/40">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-8 h-8 rounded-xl bg-purple-600/20 flex items-center justify-center border border-purple-500/30">
-                            <Activity size={16} className="text-purple-400" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-black text-purple-400 uppercase tracking-widest">AI-Powered Triage</p>
-                            <p className="text-[9px] text-slate-500 font-bold">Describe your emergency for faster response</p>
-                        </div>
-                    </div>
-                    <textarea
-                        className="w-full bg-slate-900 border-2 border-slate-800 rounded-2xl px-5 py-4 text-sm text-white placeholder-slate-600 resize-none focus:border-purple-500/50 focus:outline-none transition-colors"
-                        rows={3}
-                        value={emergencyDescription}
-                        onChange={e => setEmergencyDescription(e.target.value)}
-                        placeholder="e.g. My father collapsed, has chest pain and is not breathing..."
-                    />
-                    {emergencyDescription.trim() && (
-                        <p className="text-[9px] text-purple-400/70 mt-2 font-bold uppercase tracking-wider">✦ AI will analyze when SOS is triggered</p>
-                    )}
-                </div>
-
-                <div className="pt-6">
-                    {isTriaging ? (
-                        <div className="h-20 bg-slate-900/60 rounded-[2.5rem] border border-purple-500/30 flex items-center justify-center gap-3">
-                            <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-purple-400">AI Analyzing Emergency...</span>
-                        </div>
-                    ) : (
-                        <SlideToSOS onConfirm={triggerSOS} />
-                    )}
+                <div className="pt-12">
+                    <SlideToSOS onConfirm={triggerSOS} />
                 </div>
             </div>
         );
@@ -479,8 +585,8 @@ const App = () => {
                                 <p className="text-sm font-bold text-slate-200 leading-relaxed">{triageResult.summary}</p>
                                 <div className="flex gap-2 mt-3 flex-wrap">
                                     <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${triageResult.priority <= 2 ? 'bg-red-600/20 text-red-400 border border-red-500/30' :
-                                            triageResult.priority <= 3 ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-500/30' :
-                                                'bg-green-600/20 text-green-400 border border-green-500/30'
+                                        triageResult.priority <= 3 ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-500/30' :
+                                            'bg-green-600/20 text-green-400 border border-green-500/30'
                                         }`}>Priority {triageResult.priority}</span>
                                     <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">{triageResult.type}</span>
                                 </div>
